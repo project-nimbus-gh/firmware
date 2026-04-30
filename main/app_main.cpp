@@ -37,9 +37,7 @@ extern "C" void app_main(void)
 
     nimbus::demo::DemoTelemetrySource telemetry_source;
 
-    ESP_LOGI(kTag, "ESP32 example firmware started");
     ESP_LOGI(kTag, "Status LED is on GPIO %d", GPIO_NUM_2);
-    ESP_LOGI(kTag, "Frame format matches the server's 18-byte STX/payload/ETX packet");
 
     bool led_enabled = false;
 

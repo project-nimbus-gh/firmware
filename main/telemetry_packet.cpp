@@ -5,10 +5,14 @@
 namespace nimbus::telemetry {
 namespace {
 
-uint32_t popcount128(__uint128_t value)
+typedef struct {
+    uint64_t low;
+    uint64_t high;
+} uint128_parts;
+
+uint32_t popcount128(uint128_parts value)
 {
-    return static_cast<uint32_t>(__builtin_popcountll(static_cast<uint64_t>(value))) +
-           static_cast<uint32_t>(__builtin_popcountll(static_cast<uint64_t>(value >> 64)));
+    return __builtin_popcountll(value.low) + __builtin_popcountll(value.high);
 }
 
 float clampFloat(float value, float minimum, float maximum)
@@ -52,22 +56,36 @@ std::array<uint8_t, kPacketSize> encodePacket(const SensorPacket &packet)
     const uint16_t humidity_scaled = clampHumidityScaled(packet.humidity_percent);
     const uint16_t pressure_scaled = clampPressureScaled(packet.air_pressure_hpa);
 
-    __uint128_t raw = 0;
-    raw |= static_cast<__uint128_t>(packet.type & 0x0F) << 0;
-    raw |= static_cast<__uint128_t>(temperature_scaled & 0x7FFF) << 4;
-    raw |= static_cast<__uint128_t>(humidity_scaled & 0x03FF) << 19;
-    raw |= static_cast<__uint128_t>(pressure_scaled & 0x03FF) << 29;
-    raw |= static_cast<__uint128_t>(packet.serial) << 95;
+    // Split 128-bit logic into two 64-bit halves
+    uint64_t low = 0;
+    uint64_t high = 0;
 
-    if ((popcount128(raw) % 2U) != 0U) {
-        raw |= static_cast<__uint128_t>(1) << 127;
+    // Bits 0-63 (Handling type, temperature, humidity, pressure)
+    low |= static_cast<uint64_t>(packet.type & 0x0F) << 0;
+    low |= static_cast<uint64_t>(temperature_scaled & 0x7FFF) << 4;
+    low |= static_cast<uint64_t>(humidity_scaled & 0x03FF) << 19;
+    low |= static_cast<uint64_t>(pressure_scaled & 0x03FF) << 29;
+
+    // Bits 95-126 (Serial starts at bit 95, which is bit 31 of the 'high' half)
+    high |= static_cast<uint64_t>(packet.serial) << 31;
+
+    // Calculate parity using your new struct-based function
+    uint128_parts raw_parts = { .low = low, .high = high };
+    if ((popcount128(raw_parts) % 2U) != 0U) {
+        high |= static_cast<uint64_t>(1) << 63; // Bit 127 total
     }
 
     std::array<uint8_t, kPacketSize> encoded{};
     encoded[0] = kPacketStart;
-    for (std::size_t index = 0; index < 16; ++index) {
-        encoded[index + 1] = static_cast<uint8_t>(raw >> (120 - (index * 8)));
+    
+    // Manually serialize bytes from high to low
+    for (std::size_t index = 0; index < 8; ++index) {
+        encoded[index + 1] = static_cast<uint8_t>(high >> (56 - (index * 8)));
     }
+    for (std::size_t index = 0; index < 8; ++index) {
+        encoded[index + 9] = static_cast<uint8_t>(low >> (56 - (index * 8)));
+    }
+    
     encoded[17] = kPacketEnd;
     return encoded;
 }
