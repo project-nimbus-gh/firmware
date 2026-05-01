@@ -1,6 +1,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdio>
+#include <vector>
 
 #include "demo_telemetry.hpp"
 #include "esp_log.h"
@@ -43,6 +44,13 @@ extern "C" void app_main(void)
 
     ESP_LOGI(kTag, "Status LED is on GPIO %d", status_led.pin());
     ESP_LOGI(kTag, "Connectivity stack initialized for Wi-Fi and Bluetooth examples");
+
+    std::vector<nimbus::connect::WifiNetwork> networks = connectivity.getWifi().scanAvailableNetworks();
+
+    for (const auto &network : networks) {
+        ESP_LOGI(kTag, "Found Wi-Fi network: SSID='%s', BSSID=%s, RSSI=%d dBm, Channel=%d, AuthMode=%d",
+                 network.ssid.c_str(), network.bssid.c_str(), network.rssi, network.channel, network.auth_mode);
+    }
 
     bool led_enabled = false;
 
