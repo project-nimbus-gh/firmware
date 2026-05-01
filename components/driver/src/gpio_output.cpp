@@ -1,12 +1,12 @@
-#include "status_led.hpp"
+#include "gpio_output.hpp"
 
 #include "esp_err.h"
 
-namespace nimbus::hardware {
+namespace nimbus::driver {
 
-StatusLed::StatusLed(gpio_num_t pin) : pin_(pin) {}
+GpioOutput::GpioOutput(gpio_num_t pin) noexcept : pin_(pin) {}
 
-void StatusLed::initialize() const
+void GpioOutput::initialize() const
 {
     gpio_config_t config = {};
     config.pin_bit_mask = 1ULL << pin_;
@@ -19,9 +19,14 @@ void StatusLed::initialize() const
     ESP_ERROR_CHECK(gpio_set_level(pin_, 0));
 }
 
-void StatusLed::set(bool enabled) const
+void GpioOutput::set(bool enabled) const
 {
     ESP_ERROR_CHECK(gpio_set_level(pin_, enabled ? 1 : 0));
 }
 
-}  // namespace nimbus::hardware
+gpio_num_t GpioOutput::pin() const noexcept
+{
+    return pin_;
+}
+
+}  // namespace nimbus::driver

@@ -32,8 +32,9 @@ Example port on macOS: `/dev/cu.usbserial-xxxx`
 
 ## Project Structure
 
-- `main/app_main.cpp`: Firmware entry point
+- `components/protocol/`: Packet building, encoding, decoding, and frame validation
+- `components/driver/`: Direct GPIO hardware wrappers for LEDs and outputs
+- `components/connect/`: Wi-Fi and Bluetooth initialization helpers
+- `main/app_main.cpp`: Firmware entry point and example loop
 - `main/demo_telemetry.cpp`: Demo telemetry generation
-- `main/telemetry_packet.cpp`: Telemetry packet encoding
-- `main/status_led.cpp`: Status LED control
 - `CMakeLists.txt`: Top-level ESP-IDF project definition

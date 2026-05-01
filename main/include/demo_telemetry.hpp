@@ -6,12 +6,10 @@ namespace nimbus::demo {
 
 class DemoTelemetrySource {
 public:
-    DemoTelemetrySource();
-
-    telemetry::SensorPacket next();
+    [[nodiscard]] protocol::SensorPacket next();
 
 private:
-    uint32_t serial_;
+    uint32_t serial_ {1};
 };
 
 }  // namespace nimbus::demo
