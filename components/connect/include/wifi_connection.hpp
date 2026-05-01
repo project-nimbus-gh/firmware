@@ -1,8 +1,11 @@
 #pragma once
 
-#include <string>
 #include <functional>
 #include <cstdint>
+#include <string>
+#include <vector>
+
+#include "esp_wifi.h"
 
 namespace nimbus::connect {
 
@@ -21,6 +24,17 @@ enum class WifiState {
  * @brief WiFi event callback function signature
  */
 using WifiEventCallback = std::function<void(WifiState state)>;
+
+/**
+ * @brief Discovered WiFi access point details
+ */
+struct WifiNetwork {
+    std::string ssid;
+    std::string bssid;
+    int8_t rssi {0};
+    uint8_t channel {0};
+    wifi_auth_mode_t auth_mode {WIFI_AUTH_OPEN};
+};
 
 /**
  * @brief Manages WiFi connectivity for the Nimbus device
@@ -42,6 +56,12 @@ public:
      * @return true if connection initiated successfully, false otherwise
      */
     bool connect(const std::string &ssid, const std::string &password);
+
+    /**
+     * @brief Scan for nearby WiFi networks
+     * @return List of discovered access points, empty on failure or if none found
+     */
+    std::vector<WifiNetwork> scanAvailableNetworks();
 
     /**
      * @brief Connect to a WiFi network using saved credentials

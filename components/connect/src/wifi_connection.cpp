@@ -8,6 +8,10 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
+#include <cstdio>
+
+#include <vector>
+
 namespace nimbus::connect {
 namespace {
 
@@ -16,6 +20,7 @@ constexpr const char *kNvsNamespace = "nimbus_wifi";
 constexpr const char *kNvsSsidKey = "ssid";
 constexpr const char *kNvsPasswordKey = "password";
 constexpr uint32_t kMaxRetries = 5;
+constexpr uint16_t kMaxScanResults = 20;
 
 WifiConnection *g_wifi_instance = nullptr;
 
@@ -147,6 +152,63 @@ void WifiConnection::disconnect()
     ESP_ERROR_CHECK(esp_wifi_disconnect());
     updateState(WifiState::DISCONNECTED);
     ESP_LOGI(kTag, "WiFi disconnected");
+}
+
+std::vector<WifiNetwork> WifiConnection::scanAvailableNetworks()
+{
+    std::vector<WifiNetwork> networks;
+
+    if (!initialized_) {
+        ESP_LOGE(kTag, "WiFi not initialized");
+        return networks;
+    }
+
+    wifi_scan_config_t scan_config = {};
+    scan_config.show_hidden = true;
+
+    esp_err_t result = esp_wifi_scan_start(&scan_config, true);
+    if (result != ESP_OK) {
+        ESP_LOGE(kTag, "WiFi scan failed to start: %s", esp_err_to_name(result));
+        return networks;
+    }
+
+    uint16_t ap_count = 0;
+    result = esp_wifi_scan_get_ap_num(&ap_count);
+    if (result != ESP_OK || ap_count == 0) {
+        if (result != ESP_OK) {
+            ESP_LOGE(kTag, "Failed to get WiFi scan count: %s", esp_err_to_name(result));
+        } else {
+            ESP_LOGI(kTag, "No WiFi networks found");
+        }
+        return networks;
+    }
+
+    uint16_t record_count = ap_count > kMaxScanResults ? kMaxScanResults : ap_count;
+    std::vector<wifi_ap_record_t> records(record_count);
+    result = esp_wifi_scan_get_ap_records(&record_count, records.data());
+    if (result != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to get WiFi scan results: %s", esp_err_to_name(result));
+        return networks;
+    }
+
+    networks.reserve(record_count);
+    for (const wifi_ap_record_t &record : records) {
+        WifiNetwork network;
+        network.ssid = reinterpret_cast<const char *>(record.ssid);
+
+        char bssid[18] = {0};
+        std::snprintf(bssid, sizeof(bssid), "%02x:%02x:%02x:%02x:%02x:%02x",
+                      record.bssid[0], record.bssid[1], record.bssid[2],
+                      record.bssid[3], record.bssid[4], record.bssid[5]);
+        network.bssid = bssid;
+        network.rssi = record.rssi;
+        network.channel = record.primary;
+        network.auth_mode = record.authmode;
+        networks.push_back(std::move(network));
+    }
+
+    ESP_LOGI(kTag, "Discovered %u WiFi network(s)", static_cast<unsigned>(networks.size()));
+    return networks;
 }
 
 void WifiConnection::shutdown()
