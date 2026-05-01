@@ -34,17 +34,48 @@ void initializeIfNeeded(esp_err_t result)
 void ConnectivityStack::initialize()
 {
     if (initialized_) {
+        ESP_LOGW(kTag, "Connectivity stack already initialized");
         return;
     }
 
+    ESP_LOGI(kTag, "Initializing connectivity stack...");
+    
     initializeNvs();
+    ESP_LOGI(kTag, "NVS initialized");
+    
     initializeIfNeeded(esp_netif_init());
+    ESP_LOGI(kTag, "Network interface initialized");
+    
     initializeIfNeeded(esp_event_loop_create_default());
+    ESP_LOGI(kTag, "Event loop initialized");
 
-    wifi_.start();
+    wifi_.initialize();
+    ESP_LOGI(kTag, "WiFi initialized");
+
+    bluetooth_.initialize(BluetoothMode::DUAL);
+    ESP_LOGI(kTag, "Bluetooth initialized");
 
     initialized_ = true;
-    ESP_LOGI(kTag, "Connectivity stack initialized");
+    ESP_LOGI(kTag, "Connectivity stack initialized successfully");
+}
+
+void ConnectivityStack::shutdown()
+{
+    if (!initialized_) {
+        ESP_LOGW(kTag, "Connectivity stack not initialized");
+        return;
+    }
+
+    ESP_LOGI(kTag, "Shutting down connectivity stack...");
+
+    bluetooth_.shutdown();
+    ESP_LOGI(kTag, "Bluetooth shut down");
+
+    wifi_.shutdown();
+    ESP_LOGI(kTag, "WiFi shut down");
+
+    initialized_ = false;
+    ESP_LOGI(kTag, "Connectivity stack shut down successfully");
 }
 
 }  // namespace nimbus::connect
