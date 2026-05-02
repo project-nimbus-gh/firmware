@@ -28,13 +28,15 @@ Example port on macOS: `/dev/cu.usbserial-xxxx`
 
 - Main firmware sources are in `main/`.
 - Build artifacts are generated in `build/`.
-- Current demo behavior includes status LED blinking and synthetic telemetry logging.
+- The firmware now boots as a BLE provisioning service named `Nimbus-Setup`.
+- Bluetooth messages use JSON over a custom GATT service.
+- The default provisioning password is `default` and must be changed after the first successful Bluetooth login.
 
 ## Project Structure
 
 - `components/protocol/`: Packet building, encoding, decoding, and frame validation
 - `components/driver/`: Direct GPIO hardware wrappers for LEDs and outputs
 - `components/connect/`: Wi-Fi and Bluetooth initialization helpers
-- `main/app_main.cpp`: Firmware entry point and example loop
-- `main/demo_telemetry.cpp`: Demo telemetry generation
+- `components/provisioning/`: BLE provisioning, Wi-Fi storage, and remote management
+- `main/app_main.cpp`: Firmware entry point for provisioning mode
 - `CMakeLists.txt`: Top-level ESP-IDF project definition
